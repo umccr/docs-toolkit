@@ -1,0 +1,18 @@
+# Build output: never commit a generated site. `make sites` builds the examples into build/sites/, and every build
+# works in a .umccr-docs/ folder beside its mkdocs.yml. Hatch leaves out of the package whatever this file ignores.
+site/
+build/
+dist/
+.umccr-docs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Local state and credentials
+.env
+.DS_Store

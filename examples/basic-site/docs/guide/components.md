@@ -34,7 +34,7 @@ Every element the theme styles, on one page, so a change to the theme can be che
 ## Code
 
 ```sh
-pip install --no-deps <docs-platform>/toolkit
+pip install --no-deps <docs-toolkit>
 umccr-docs serve
 ```
 
