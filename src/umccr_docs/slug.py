@@ -1,4 +1,4 @@
-"""Slug rules. They mirror the site registry in this repository (`infrastructure/sites.ts`)."""
+"""Slug rules. They mirror the site registry in umccr/docs-platform (`infrastructure/sites.ts`)."""
 
 import re
 
@@ -6,7 +6,7 @@ from umccr_docs.errors import DocsError
 
 DOCS_ORIGIN = "https://docs.umccr.org"
 
-# The same limit as MAX_SLUG_LENGTH in infrastructure/sites.ts.
+# The same limit as MAX_SLUG_LENGTH in docs-platform's infrastructure/sites.ts.
 MAX_SLUG_LENGTH = 49
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")

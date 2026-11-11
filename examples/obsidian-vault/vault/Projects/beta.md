@@ -16,4 +16,4 @@ The follow-on to [[alpha]].
 
 ## Related
 
-- GitHub: https://github.com/umccr/docs-platform
+- GitHub: https://github.com/umccr/docs-toolkit
