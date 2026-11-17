@@ -15,18 +15,20 @@ dependencies = [
   "boto3>=1.34",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
-
 [project.scripts]
 umccr-docs = "umccr_docs.cli:main"
 
+[project.urls]
+Homepage = "https://github.com/umccr/docs-toolkit"
+Changelog = "https://github.com/umccr/docs-toolkit/blob/main/CHANGELOG.md"
+Issues = "https://github.com/umccr/docs-toolkit/issues"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/umccr_docs"]
-# Hatch leaves out what the repository's .gitignore ignores, read from this folder: `*.js` matches the theme's script,
-# and the exception for it is written from the repository root, so it never matches here. Without this line, the
-# wheel that CI and the site pipeline install has no umccr.js:
-# docs/issues/2026-10-21-theme-script-missing-from-wheel.md.
+# Hatch leaves out of the wheel whatever .gitignore ignores. This repository's ignores no script, but the theme's are
+# listed anyway: built in umccr/docs-platform, whose .gitignore ignores `*.js`, the wheel that CI and the site pipeline
+# installed once had no umccr.js, and every page lost its catalogue, account menu and chat panel:
+# https://github.com/umccr/docs-platform/blob/main/docs/issues/2026-10-21-theme-script-missing-from-wheel.md
 artifacts = ["src/umccr_docs/theme/**/*.js"]
 
 [tool.pytest.ini_options]

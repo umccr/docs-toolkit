@@ -1,0 +1,52 @@
+name: release
+
+# Creates the GitHub release for each version tag, with its notes from CHANGELOG.md. With release immutability on in
+# the repository's settings, the release locks its tag to its commit: the release a site's toolkitRef names in
+# umccr/docs-platform can then never change under it.
+on:
+  push:
+    tags: ['v*']
+
+permissions: {}
+
+# One run per tag; a release half made is finished, never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: GitHub release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # A tag whose package version differs, or that CHANGELOG.md has no section for, gets no release.
+      - name: Check the version and take the notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          read_version='import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])'
+          version="$(python3 -c "$read_version")"
+          if [[ "$TAG" != "v$version" ]]; then
+            echo "::error::Tag $TAG does not match the package version in pyproject.toml, $version"
+            exit 1
+          fi
+          awk -v heading="## $TAG" '$0 == heading { found = 1; next } found && /^## / { exit } found' CHANGELOG.md \
+            > "$RUNNER_TEMP/notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
+            echo "::error::CHANGELOG.md has no '## $TAG' section to take the release notes from"
+            exit 1
+          fi
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          prerelease=()
+          if [[ "$TAG" == *-* ]]; then prerelease=(--prerelease); fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" "${prerelease[@]}"

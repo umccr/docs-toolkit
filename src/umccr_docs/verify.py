@@ -36,7 +36,7 @@ def verify_site(site_dir: Path) -> list[str]:
             problems.append(f"{required} is missing from the site root")
     # Every page links these, so a site without one loses the catalogue, the account menu or the chat panel. The usual
     # cause is a toolkit installed without part of its theme:
-    # docs/issues/2026-10-21-theme-script-missing-from-wheel.md.
+    # https://github.com/umccr/docs-platform/blob/main/docs/issues/2026-10-21-theme-script-missing-from-wheel.md
     for required in THEME_FILES:
         if not (site_dir / required).is_file():
             problems.append(f"{required} is missing: the toolkit was installed without part of its theme")

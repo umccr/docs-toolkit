@@ -1787,7 +1787,7 @@ body {
 }
 
 /* ------------------------------------------------------------------------------------------------------------------
- * The catalogue: the platform site's home page (docs/site/index.md), with the sites from
+ * The catalogue: the platform site's home page (docs/site/index.md in umccr/docs-platform), with the sites from
  * /_platform/data/catalog.json rendered into #umccr-catalogue and the question box into #umccr-ask. */
 
 .md-content:has(.umccr-home) {

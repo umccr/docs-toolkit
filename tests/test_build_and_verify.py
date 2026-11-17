@@ -40,7 +40,7 @@ def test_obsidian_example_builds_strictly(built):
     assert "Generated from note properties" in home
     assert '<a href="Projects/alpha/">alpha</a></div>' in home, "a Tasks list's note label links to the page"
     beta = (site / "Projects" / "beta" / "index.html").read_text()
-    assert '<a href="https://github.com/umccr/docs-platform">' in beta, "a bare URL is a link"
+    assert '<a href="https://github.com/umccr/docs-toolkit">' in beta, "a bare URL is a link"
 
 
 def test_each_page_links_its_file_on_github(make_project, tmp_path):
@@ -86,7 +86,7 @@ def test_the_platform_config_is_not_overridable():
     assert config["extra"]["homepage"] == "/platform/"
     assert "platform" not in config["extra"]
     assert "classification" not in config["extra"]
-    assert config["edit_uri"] == "blob/main/toolkit/examples/basic-site/docs/", "pages link their file, not the editor"
+    assert config["edit_uri"] == "blob/main/examples/basic-site/docs/", "pages link their file, not the editor"
     assert config["use_directory_urls"] is True
     assert not any("snippets" in str(extension) for extension in config["markdown_extensions"])
 

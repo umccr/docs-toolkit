@@ -1663,8 +1663,8 @@
     document.body.appendChild(panel);
   }
 
-  // What the build refuses in a page (docs/site/authoring.md, "Not allowed"): elements that run or embed code, event
-  // handler attributes, and script URLs.
+  // What the build refuses in a page (docs/site/authoring.md in umccr/docs-platform, "Not allowed"): elements that run
+  // or embed code, event handler attributes, and script URLs.
   var UNSAFE_ELEMENT = /^(script|iframe|frame|frameset|object|embed|base)$/i;
   var URL_ATTRIBUTE = /(^|:)(href|src|action|formaction)$/i;
   var SCRIPT_URL = /^(javascript|vbscript):/i;

@@ -39,7 +39,7 @@ def test_example_vault(tmp_path):
     assert "[Inbox/alpha](alpha.md)" in inbox
 
     writing = (out / "Guides" / "writing.md").read_text()
-    assert "(https://github.com/umccr/docs-platform/blob/main/toolkit/examples/obsidian-vault/README.md)" in writing
+    assert "(https://github.com/umccr/docs-toolkit/blob/main/examples/obsidian-vault/README.md)" in writing
 
     alpha = (out / "Projects" / "alpha.md").read_text()
     assert '<dt>Lead</dt><dd markdown="span">Ada</dd>' in alpha
