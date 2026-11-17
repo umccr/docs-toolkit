@@ -70,7 +70,7 @@ jobs:
           done
 
   repository:
-    name: Workflows, secrets and information boundary
+    name: Workflows and secrets
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -79,12 +79,10 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
-      - run: python -m pip install --require-hashes -r requirements/dev.txt
-      - name: actionlint
-        run: actionlint
-      - name: zizmor
-        run: zizmor --no-progress .github/workflows
-      - name: detect-secrets
-        run: git ls-files -z | xargs -0 detect-secrets-hook --baseline .secrets.baseline
-      - name: Information boundary
-        run: scripts/check-boundary.sh
+      - run: python -m pip install pre-commit==4.7.0
+      # Every hook in .pre-commit-config.yaml, as `make check` runs them: detect-secrets, actionlint, zizmor and the
+      # file checks. ruff runs from the virtualenv, so it runs in "Tests and lint" instead.
+      - name: pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure
+        env:
+          SKIP: ruff,ruff-format

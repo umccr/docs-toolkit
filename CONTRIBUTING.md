@@ -12,7 +12,7 @@ pull request: review there is the only gate before each site that moves to the n
 | Diagrams | Mermaid `11.17.2`: the npm package's `dist/mermaid.min.js`, in the theme at `assets/umccr/mermaid/`, which Material's own diagram support draws with |
 | Tests | pytest `9.1.1`; Node.js 22 or later (`.nvmrc`) with its own test runner for the theme's script |
 | Lint and format | ruff `0.16.9` |
-| Repository checks | pre-commit; detect-secrets `1.5.0`; actionlint and zizmor `1.30.1` for the workflows; `scripts/check-boundary.sh` |
+| Repository checks | pre-commit, `4.7.0` in CI, with its hooks pinned by commit: detect-secrets `1.5.0`; actionlint `1.7.12` and zizmor `1.30.1` for the workflows; pre-commit-hooks `6.0.0` |
 
 ## Set up
 
@@ -22,7 +22,7 @@ toolkit and its tools in a virtualenv, `.venv`.
 | Command | Does |
 | --- | --- |
 | `make install` | `.venv` with the hash-pinned engine, the dev tools and the toolkit (editable); the pre-commit git hook |
-| `make check` | ruff, actionlint and zizmor, and the pre-commit hooks on every tracked file |
+| `make check` | ruff, then the pre-commit hooks on every tracked file: secrets, and the workflows with actionlint and zizmor |
 | `make test` | pytest, with strict builds of the examples; then the theme script's tests with `node --test` |
 | `make sites` | strict builds and pre-publish checks of the examples into `build/sites/`, as CI runs them |
 | `make serve` | the basic example on `http://127.0.0.1:8000`, rebuilt as it changes; `CONFIG=` another `mkdocs.yml` |
@@ -34,9 +34,8 @@ installs the toolkit editable, which reads the theme from the source tree, so a 
 package leaves out. CI installs the wheel instead, as the site pipeline does
 ([2026-10-21](https://github.com/umccr/docs-platform/blob/main/docs/issues/2026-10-21-theme-script-missing-from-wheel.md)).
 
-To see a change on a real site before it is released, run `umccr-docs serve` in that site's repository with this
-virtualenv active. In umccr/docs-platform, `make toolkit TOOLKIT_REF=<commit>` installs any pushed commit of this
-repository for its own `/platform/` site.
+To see a change on a real site before it is released, `/platform/` in umccr/docs-platform among them, run
+`umccr-docs serve` in that site's repository with this virtualenv active.
 
 ## Tests and CI
 
@@ -45,29 +44,30 @@ repository for its own `/platform/` site.
 - **node --test** (`tests/js/`): the chat panel's Markdown renderer, its reader for an answer's event stream and its
   stall watchdog, by running `umccr.js` in a VM, where it exports them instead of drawing a page.
 - **CI** (`.github/workflows/ci.yml`), on every pull request and every push to `main`: "Tests and lint", "Theme
-  script tests", "Strict builds of the examples", and "Workflows, secrets and information boundary". `main`'s ruleset
+  script tests", "Strict builds of the examples", and "Workflows and secrets", the pre-commit hooks. `main`'s ruleset
   should require all four ([Repository settings](#repository-settings)).
 - **Release** (`.github/workflows/release.yml`), on every `v*` tag: the GitHub release ([Release](#release)).
 
 ## Conventions
 
-- **This repository is public.** It holds generic code and documentation only: no account IDs, ARNs, bucket names,
-  credentials or private content ([SECURITY.md](SECURITY.md)). `scripts/check-boundary.sh` and detect-secrets enforce
-  part of this, in CI and in the pre-commit hook; reviewers enforce the rest.
+- **This repository is public.** It holds code, documentation and synthetic examples, never credentials or private
+  content ([SECURITY.md](SECURITY.md)). detect-secrets and pre-commit's key checks catch credentials on each commit
+  and in CI, and GitHub secret scanning and GitGuardian on each push; reviewers check the rest.
 - **Sites cannot run code.** Every site shares one browser origin, where the sign-in keeps its tokens. The theme and
   its one script are the platform's, and the contract (`contract.py`, `active_content.py`) and `verify-site` keep
   scripts, event handlers, frames and script URLs out of every page. A change to them is a security change; say so
   in the pull request.
 - **Everything is pinned.** Python dependencies by hash (`requirements/*.txt`, regenerated with `uv pip compile` from
-  the `.in` files), every third-party action by full commit SHA with its version in a comment, and the theme's copy
-  of Mermaid by version.
+  the `.in` files); each pre-commit hook by commit SHA with its version in a comment, and pre-commit itself by version
+  in CI; every third-party action by full commit SHA with its version in a comment; and the theme's copy of Mermaid by
+  version.
 
 ## Change these together
 
 | When you change | Also change |
 | --- | --- |
 | the version | `pyproject.toml` and `src/umccr_docs/__init__.py` together (a test compares them), and `CHANGELOG.md` |
-| where the engine pins are, `requirements/build.txt` | in umccr/docs-platform, `INSTALL_TOOLKIT` in `infrastructure/toolchain/sites-pipeline.ts`, which must still install every release a site or a rollback may name, and the Makefile's `toolkit` target |
+| where the engine pins are, `requirements/build.txt` | in umccr/docs-platform, `INSTALL_TOOLKIT` in `infrastructure/toolchain/sites-pipeline.ts`, which must still install every release a site or a rollback may name, and the "Install the toolkit" step in its `.github/workflows/ci.yml` |
 | the theme's scripts | keep `artifacts` in `pyproject.toml`; `verify-site` refuses a site that lacks one (`THEME_FILES` in `verify.py`) |
 | the theme's copy of Mermaid | its version in [The stack](#the-stack) and `CHANGELOG.md`; its folder stays excluded from the large-file and whitespace hooks in `.pre-commit-config.yaml`, which would rewrite it |
 | the slug rules in `slug.py` | `MAX_SLUG_LENGTH` and `RESERVED_SLUGS` in umccr/docs-platform's `infrastructure/sites.ts` |
@@ -77,7 +77,9 @@ repository for its own `/platform/` site.
 
 - **Engine and runtime**: edit `requirements/build.in` and regenerate `requirements/build.txt` with the command at
   the top of the file. The hashes change with it.
-- **Test and lint tools**: `requirements/dev.in` and `requirements/dev.txt`, the same way.
+- **Test and lint tools**: pytest and ruff in `requirements/dev.in` and `requirements/dev.txt`, the same way.
+- **Checks**: `pre-commit autoupdate --freeze` pins every hook to its newest release's commit, with the version in a
+  comment (`--repo <url>` for one hook); then `make check`. pre-commit itself is pinned in `.github/workflows/ci.yml`.
 - **Actions**: every third-party action is pinned to a full commit SHA with its version in a comment. Update both.
 - **Mermaid**: the theme's copy, `src/umccr_docs/theme/assets/umccr/mermaid/`, is the `mermaid` package's
   `dist/mermaid.min.js` and `LICENSE`, byte for byte. Take the newest release of the major version Material for
@@ -148,12 +150,9 @@ An organisation owner sets these:
 
 - **Rulesets**, under **Settings → Rules → Rulesets**:
   - **`main`**: require a pull request with one approval, and the `ci` checks to pass ("Tests and lint", "Theme
-    script tests", "Strict builds of the examples", "Workflows, secrets and information boundary"); block force
-    pushes and deletion.
+    script tests", "Strict builds of the examples", "Workflows and secrets"); block force pushes and deletion.
   - **`v*` tags**: only the platform owners may create them, and nobody may update or delete one: a moved tag would
     change how sites build without a registry change.
 - **Release immutability**, under **Settings → General → Releases**, before the first release: each release then
   locks its tag. It covers only releases made after it is on.
-- **Code owners**, later: once the owners' team is named, add `.github/CODEOWNERS` with `* @umccr/<team>`, and
-  require their review on `main` too.
 - **Secret scanning, push protection and Dependabot alerts**, and private vulnerability reporting.

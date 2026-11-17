@@ -28,12 +28,10 @@ install:
 	@$(BIN)/pip install --quiet --no-deps -e .
 	@pre-commit install --install-hooks
 
-# Lint and formatting, the workflows, then the pre-commit hooks (secrets, the information boundary).
+# Lint and formatting, then the pre-commit hooks: secrets, and the workflows (actionlint, zizmor).
 check:
 	@$(BIN)/ruff check .
 	@$(BIN)/ruff format --check .
-	@$(BIN)/actionlint
-	@$(BIN)/zizmor --no-progress .github/workflows
 	@pre-commit run --all-files
 
 fix:

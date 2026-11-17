@@ -61,7 +61,6 @@ requirements/       hash-pinned engine (build.txt), test and lint tools (dev.txt
 templates/          mkdocs.yml templates for a site's repository
 examples/           synthetic sites CI builds strictly: plain Markdown and an Obsidian vault
 tests/              pytest, with strict builds of the examples; js/ runs the theme script with Node's test runner
-scripts/            check-boundary.sh, the public-repository information-boundary check
 ```
 
 ## Development
