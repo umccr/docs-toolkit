@@ -17,7 +17,7 @@ Releases are git tags, `vX.Y.Z`; nothing is published to PyPI. Install one as th
 documentation engine from the release's hash-pinned requirements, then the package from the same checkout.
 
 ```sh
-git clone --branch v0.3.1 https://github.com/umccr/docs-toolkit.git
+git clone --branch v0.3.2 https://github.com/umccr/docs-toolkit.git
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install --require-hashes --no-deps -r docs-toolkit/requirements/build.txt
 pip install --no-deps ./docs-toolkit
