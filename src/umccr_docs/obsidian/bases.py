@@ -7,8 +7,11 @@ reported as a problem instead of producing a wrong table:
 
 - filters: nested `and`, `or`, `not`; `prop == value`, `prop != value`; `prop.contains(value)`;
   `prop.contains(link("note"))`; `file.inFolder("Folder")`; values may be strings, numbers or booleans
+- `this`: the note the block is in, as Obsidian has it for a block written in a note. `this.<property>` is a value
+  (`type == this.type`), a link target (`domains.contains(link(this.file.name))`) or the property a filter tests
 - properties: frontmatter names (optionally prefixed `note.`), `file.name`, `file.folder`, `file.path`
-- views: `type: table` with `name`, `order`, `sort` and `limit`; `properties.<name>.displayName` for headers
+- views: `type: table` with `name`, `filters`, `order`, `sort` and `limit`; a view's `filters` narrow the block's,
+  as in Obsidian; `properties.<name>.displayName` for headers
 """
 
 import datetime
@@ -27,7 +30,9 @@ class UnsupportedBase(Exception):
     pass
 
 
-_LITERAL = r'(?:"[^"]*"|\'[^\']*\'|-?\d+(?:\.\d+)?|true|false|link\(\s*(?:"[^"]*"|\'[^\']*\')\s*\))'
+_STRING = r'(?:"[^"]*"|\'[^\']*\')'
+_THIS = r"this\.[A-Za-z_][\w.-]*"
+_LITERAL = rf"(?:{_STRING}|-?\d+(?:\.\d+)?|true|false|{_THIS}|link\(\s*(?:{_STRING}|{_THIS})\s*\))"
 _PROPERTY = r"[A-Za-z_][\w.-]*"
 _COMPARISON = re.compile(rf"^(?P<prop>{_PROPERTY})\s*(?P<op>==|!=)\s*(?P<value>{_LITERAL})$")
 _CONTAINS = re.compile(rf"^(?P<prop>{_PROPERTY})\.contains\(\s*(?P<value>{_LITERAL})\s*\)$")
@@ -40,11 +45,32 @@ class Literal:
     is_link: bool = False
 
 
-def _literal(raw: str) -> Literal:
+def _this(expression: str, this: Note | None) -> Note:
+    if this is None:
+        raise UnsupportedBase(f"'{expression}': 'this' needs the note the block is in")
+    return this
+
+
+def _this_value(name: str, this: Note | None) -> Any:
+    """`this.<property>` as a value: one value, or a problem rather than a filter that quietly matches nothing."""
+    note = _this(name, this)
+    value = property_value(note, name.removeprefix("this."))
+    if value is None or isinstance(value, (list, dict)):
+        raise UnsupportedBase(f"'{name}' has no single value in {note.path}")
+    return value
+
+
+def _literal(raw: str, this: Note | None = None) -> Literal:
     raw = raw.strip()
-    link = re.fullmatch(r"link\(\s*(?:\"([^\"]*)\"|'([^']*)')\s*\)", raw)
+    link = re.fullmatch(r"link\(\s*(.+?)\s*\)", raw)
     if link:
-        return Literal((link.group(1) if link.group(1) is not None else link.group(2)).lower(), is_link=True)
+        # The name of a note, or a frontmatter link to one: link("area"), link(this.file.name), link(this.parent).
+        name = link_target_name(_literal(link.group(1), this).value)
+        if name is None:
+            raise UnsupportedBase(f"'{raw}' does not name a note")
+        return Literal(name, is_link=True)
+    if raw.startswith("this."):
+        return Literal(_this_value(raw, this))
     if raw[0] in "\"'":
         return Literal(raw[1:-1])
     if raw in ("true", "false"):
@@ -62,6 +88,13 @@ def property_value(note: Note, name: str) -> Any:
     if name.startswith("file."):
         raise UnsupportedBase(f"property '{name}' is not supported")
     return note.frontmatter.get(name.removeprefix("note."))
+
+
+def _operand(note: Note, name: str, this: Note | None) -> Any:
+    """The property a filter tests: the candidate note's, or the block's own note's for `this.<property>`."""
+    if name.startswith("this."):
+        return property_value(_this(name, this), name.removeprefix("this."))
+    return property_value(note, name)
 
 
 def _equals(actual: Any, expected: Literal) -> bool:
@@ -86,8 +119,8 @@ def _contains(actual: Any, expected: Literal) -> bool:
     return str(expected.value) in str(actual)
 
 
-def evaluate(node: Any, note: Note) -> bool:
-    """Whether `note` matches a Bases filter node."""
+def evaluate(node: Any, note: Note, this: Note | None = None) -> bool:
+    """Whether `note` matches a Bases filter node, in a block written in the note `this`."""
     if isinstance(node, dict):
         if len(node) != 1:
             raise UnsupportedBase(f"filter {node!r} must have exactly one of and/or/not")
@@ -95,24 +128,22 @@ def evaluate(node: Any, note: Note) -> bool:
         if not isinstance(children, list):
             raise UnsupportedBase(f"'{operator}' must hold a list of filters")
         if operator == "and":
-            return all(evaluate(child, note) for child in children)
+            return all(evaluate(child, note, this) for child in children)
         if operator == "or":
-            return any(evaluate(child, note) for child in children)
+            return any(evaluate(child, note, this) for child in children)
         if operator == "not":
-            return not any(evaluate(child, note) for child in children)
+            return not any(evaluate(child, note, this) for child in children)
         raise UnsupportedBase(f"filter operator '{operator}' is not supported")
 
     if not isinstance(node, str):
         raise UnsupportedBase(f"filter {node!r} is not supported")
     expression = node.strip()
-    if "this." in expression or expression.startswith("this"):
-        raise UnsupportedBase(f"'{expression}': 'this' is not supported; use a literal value")
 
     if match := _COMPARISON.match(expression):
-        result = _equals(property_value(note, match.group("prop")), _literal(match.group("value")))
+        result = _equals(_operand(note, match.group("prop"), this), _literal(match.group("value"), this))
         return result if match.group("op") == "==" else not result
     if match := _CONTAINS.match(expression):
-        return _contains(property_value(note, match.group("prop")), _literal(match.group("value")))
+        return _contains(_operand(note, match.group("prop"), this), _literal(match.group("value"), this))
     if match := _IN_FOLDER.match(expression):
         folder = match.group("value")[1:-1].strip("/")
         return note.folder == folder or note.folder.startswith(folder + "/")
@@ -179,7 +210,7 @@ def render_query(
         raise UnsupportedBase(f"{', '.join(sorted(unsupported))} not supported")
 
     filters = query.get("filters")
-    matching = [note for note in vault.notes if filters is None or evaluate(filters, note)]
+    matching = [note for note in vault.notes if filters is None or evaluate(filters, note, from_note)]
     properties = query.get("properties") or {}
 
     views = query.get("views") or [{"type": "table", "order": ["file.name"]}]
@@ -187,11 +218,11 @@ def render_query(
     for view in views:
         if view.get("type") != "table":
             raise UnsupportedBase(f"view type '{view.get('type')}' is not supported; use table")
-        unknown = set(view) - {"type", "name", "order", "sort", "limit"}
+        unknown = set(view) - {"type", "name", "filters", "order", "sort", "limit"}
         if unknown:
             raise UnsupportedBase(f"view option(s) {', '.join(sorted(unknown))} not supported")
         view_filters = view.get("filters")
-        notes = [note for note in matching if view_filters is None or evaluate(view_filters, note)]
+        notes = [note for note in matching if view_filters is None or evaluate(view_filters, note, from_note)]
         notes = _sorted(notes, view.get("sort") or [], sort_orders)
         if isinstance(view.get("limit"), int):
             notes = notes[: view["limit"]]

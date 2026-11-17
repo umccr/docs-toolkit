@@ -45,6 +45,8 @@ PROJECT_GAMMA = note(
 )
 INBOX_ALPHA = note("Inbox/alpha.md", type="inbox", status="promoted")
 AREA = note("Projects/_domains/area.md", type="domain")
+# A note whose own frontmatter names the domain, as a link.
+FOCUS = note("Focus.md", type="note", focus="[[area]]", lead="Grace")
 HOME = note("Home.md", "index.md", type="note")
 GUIDE = note("Guides/writing.md", type="note")
 
@@ -174,11 +176,44 @@ class TestBasesFilters:
 
     @pytest.mark.parametrize(
         "expression",
-        ['this.file.name == "x"', 'file.hasTag("x")', "priority > 2", 'file.ctime == "x"'],
+        ['file.hasTag("x")', "priority > 2", 'file.ctime == "x"', 'this.file.hasTag("x")'],
     )
     def test_unsupported_syntax_is_an_error(self, expression):
         with pytest.raises(UnsupportedBase):
-            evaluate(expression, PROJECT_ALPHA)
+            evaluate(expression, PROJECT_ALPHA, AREA)
+
+    @pytest.mark.parametrize(
+        ("expression", "this", "matches"),
+        [
+            # The block's own note, as the knowledgebase's domain notes list their projects.
+            ("domains.contains(link(this.file.name))", AREA, {PROJECT_ALPHA, PROJECT_BETA}),
+            ("type == this.type", AREA, {AREA}),
+            ("lead == this.lead", FOCUS, {PROJECT_BETA, PROJECT_GAMMA}),
+            ("lead != this.lead", FOCUS, set(NOTES) - {PROJECT_BETA, PROJECT_GAMMA}),
+            # A frontmatter link on the block's note: link() takes the note it points at.
+            ("domains.contains(link(this.focus))", FOCUS, {PROJECT_ALPHA, PROJECT_BETA}),
+            # A condition on the block's own note holds for every note or for none.
+            ('this.file.name == "area"', AREA, set(NOTES)),
+            ('this.file.folder == "Inbox"', AREA, set()),
+            # Text that merely mentions "this." is a literal like any other.
+            ('status == "this.one"', AREA, set()),
+        ],
+    )
+    def test_this_is_the_note_the_block_is_in(self, expression, this, matches):
+        assert {candidate for candidate in NOTES if evaluate(expression, candidate, this)} == matches
+
+    @pytest.mark.parametrize(
+        ("expression", "this", "message"),
+        [
+            ("domains.contains(link(this.file.name))", None, "needs the note the block is in"),
+            ("type == this.missing", AREA, "has no single value in Projects/_domains/area.md"),
+            ("status == this.domains", PROJECT_ALPHA, "has no single value"),
+            ("domains.contains(link(this.priority))", FOCUS, "has no single value"),
+        ],
+    )
+    def test_a_this_value_it_cannot_use_is_an_error(self, expression, this, message):
+        with pytest.raises(UnsupportedBase, match=message):
+            evaluate(expression, PROJECT_ALPHA, this)
 
 
 class TestBasesTables:
@@ -205,6 +240,51 @@ class TestBasesTables:
             "| --- | --- | --- |",
             "| [alpha](Projects/alpha.md) | High | [area](Projects/_domains/area.md) |",
             "| [beta](Projects/beta.md) | Medium | [area](Projects/_domains/area.md) |",
+        ]
+
+    def test_a_domain_note_lists_its_own_projects(self, vault):
+        # The knowledgebase's domain notes, as they have it: the block's own note is `this`.
+        query = {
+            "filters": {"and": ['type == "project"', "domains.contains(link(this.file.name))", 'status != "done"']},
+            "views": [{"type": "table", "name": "Projects", "order": ["file.name", "status"]}],
+        }
+        problems: list[str] = []
+        table = render_query(query, AREA, vault, {}, problems, [])
+        assert problems == []
+        assert [line for line in table.splitlines() if line.startswith("| [")] == [
+            "| [alpha](../alpha.md) | active |",
+            "| [beta](../beta.md) | backlog |",
+        ]
+
+        # From another note the same block lists that note's projects: here, none.
+        other = render_query(query, GUIDE, vault, {}, [], [])
+        assert "*No matching notes.*" in other
+
+    def test_a_view_s_filters_narrow_the_block_s(self, vault):
+        query = {
+            "filters": {"and": ['type == "project"', "domains.contains(link(this.file.name))"]},
+            "views": [
+                {"type": "table", "name": "Active", "order": ["file.name", "status"], "filters": 'status == "active"'},
+                {
+                    "type": "table",
+                    "name": "Not active",
+                    "order": ["file.name", "status"],
+                    "filters": {"not": ['status == "active"']},
+                },
+                {"type": "table", "name": "All", "order": ["file.name", "status"], "filters": "type != this.type"},
+            ],
+        }
+        problems: list[str] = []
+        table = render_query(query, AREA, vault, {}, problems, [])
+        assert problems == []
+        assert [line for line in table.splitlines() if line.startswith(("**", "| ["))] == [
+            "**Active**",
+            "| [alpha](../alpha.md) | active |",
+            "**Not active**",
+            "| [beta](../beta.md) | backlog |",
+            "**All**",
+            "| [alpha](../alpha.md) | active |",
+            "| [beta](../beta.md) | backlog |",
         ]
 
     def test_shows_a_link_to_a_missing_note_as_text_and_warns(self, vault):
@@ -257,6 +337,7 @@ class TestBasesTables:
         [
             {"views": [{"type": "cards"}]},
             {"views": [{"type": "table", "groupBy": "status"}]},
+            {"views": [{"type": "table", "filters": "priority > 2"}]},
             {"formulas": {"x": "1"}, "views": [{"type": "table"}]},
         ],
     )

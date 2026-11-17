@@ -11,7 +11,7 @@ title: "Platform area"
 filters:
   and:
     - type == "project"
-    - domains.contains(link("platform-area"))
+    - domains.contains(link(this.file.name))
 views:
   - type: table
     name: Projects
