@@ -7,11 +7,12 @@ Releases up to `v0.3.1` were tagged in [umccr/docs-platform](https://github.com/
 are in its [changelog](https://github.com/umccr/docs-platform/blob/main/docs/site/changelog.md). This repository has
 the same history, and the tags from `v0.2.0` on the same files.
 
-## Unreleased
+## v0.3.2
 
-Bases blocks can filter on the note they are in, `this`, as in Obsidian: a domain note lists the projects that link to
-it with `domains.contains(link(this.file.name))`. The knowledgebase's domain notes do, and its build stopped on them.
-No other page changes.
+The first release from this repository, and a patch release: no site needs a change. Bases blocks can filter on the
+note they are in, `this`, as in Obsidian: a domain note lists the projects that link to it with
+`domains.contains(link(this.file.name))`. The knowledgebase's domain notes do, and its builds stopped on them. A view's
+own `filters` work too. No other page changes.
 
 - `this.file.name`, `this.file.path`, `this.file.folder` and `this.<property>` are the block's own note: a value
   (`type == this.type`), a link target (`link(this.file.name)`, or `link(this.parent)` for a frontmatter link), or the
