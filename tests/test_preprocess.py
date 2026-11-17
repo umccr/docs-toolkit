@@ -34,6 +34,11 @@ def test_example_vault(tmp_path):
     ada = (out / "Status" / "ada.md").read_text()
     assert "([alpha > Actions & Follow-up](../Projects/alpha.md#actions--follow-up){ .umccr-task-link })" in ada
 
+    # A domain note lists the projects that link to it, through `this`: the note the block is in.
+    area = (out / "Projects" / "_domains" / "platform-area.md").read_text()
+    assert "```base" not in area
+    assert all(f"[{name}](../{name}.md)" in area for name in ("alpha", "beta", "gamma"))
+
     inbox = (out / "Inbox" / "alpha.md").read_text()
     assert "[alpha](../Projects/alpha.md)" in inbox, "prefer_folders sends a duplicate name to Projects/"
     assert "[Inbox/alpha](alpha.md)" in inbox
