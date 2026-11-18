@@ -1,7 +1,8 @@
 # Changelog
 
-All notable changes to `umccr-docs`, the toolkit, and its theme. A site picks a release up when its entry in the site
-registry in umccr/docs-platform (`toolkitRef`) moves to it. Each release's notes on GitHub are its section here.
+All notable changes to `umccr-docs`, the toolkit, and its theme. Each docs.umccr.org site builds with the latest
+release from its next push, unless its entry in the site registry in umccr/docs-platform (`toolkitRef`) pins another.
+Each release's notes on GitHub are its section here.
 
 Releases up to `v0.3.1` were tagged in [umccr/docs-platform](https://github.com/umccr/docs-platform), and their notes
 are in its [changelog](https://github.com/umccr/docs-platform/blob/main/docs/site/changelog.md). This repository has

@@ -47,10 +47,13 @@ site may contain. The [templates](templates/) are the `mkdocs.yml` to start from
 
 ## How docs.umccr.org uses it
 
-The site registry in umccr/docs-platform pins the release each site builds with: `toolkitRef`, a release tag or a
-full commit. For every release of a site, its site pipeline clones this repository at that ref, installs it as above,
-and runs `check`, `build`, `verify-site` and `export-kb` with no write access, then `publish` in each stage. A release
-here changes no site until the registry moves to it.
+Every site builds with this repository's latest release, unless the site registry in umccr/docs-platform pins it to a
+release tag or a full commit (`toolkitRef`;
+[ADR-0011](https://github.com/umccr/docs-platform/blob/main/docs/design/adr/0011-latest-toolkit-release.md)). When a
+release of a site starts, the platform looks up the latest release's tag; its site pipeline clones this repository at
+that tag, installs it as above, and runs `check`, `build`, `verify-site` and `export-kb` with no write access, then
+`publish` in each stage. A release here therefore reaches every site that pins none at the site's next push, with no
+change in umccr/docs-platform.
 
 ## Layout
 

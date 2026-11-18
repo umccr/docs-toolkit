@@ -57,6 +57,11 @@ To see a change on a real site before it is released, `/platform/` in umccr/docs
   its one script are the platform's, and the contract (`contract.py`, `active_content.py`) and `verify-site` keep
   scripts, event handlers, frames and script URLs out of every page. A change to them is a security change; say so
   in the pull request.
+- **A release reaches the sites.** Every docs.umccr.org site that pins no release builds with the latest release from
+  its next push
+  ([ADR-0011](https://github.com/umccr/docs-platform/blob/main/docs/design/adr/0011-latest-toolkit-release.md)): review
+  here, and the release, are the last checks before the sites. A change that needs sites to change goes out as a
+  pre-release first, which is never latest.
 - **Everything is pinned.** Python dependencies by hash (`requirements/*.txt`, regenerated with `uv pip compile` from
   the `.in` files); each pre-commit hook by commit SHA with its version in a comment, and pre-commit itself by version
   in CI; every third-party action by full commit SHA with its version in a comment; and the theme's copy of Mermaid by
@@ -92,8 +97,8 @@ To see a change on a real site before it is released, `/platform/` in umccr/docs
 
 ## Release
 
-A release is a tag on `main` and the GitHub release the release workflow makes for it. It changes no site: the site
-registry in umccr/docs-platform moves sites to it afterwards, one at a time or together.
+A release is a tag on `main` and the GitHub release the release workflow makes for it. Once it is the latest release,
+every docs.umccr.org site that pins none builds with it from its next push: nothing changes in umccr/docs-platform.
 
 ### 1. Prepare the release
 
@@ -125,11 +130,22 @@ and its package version is written the same way, `0.4.0-rc.1`. With release immu
 tag to its commit. A tag the workflow refuses has no release, and cannot be moved: fix the cause on `main`, and
 release the next patch version.
 
-### 4. Move the sites
+The workflow marks the release **Latest** only when no released version is higher, so a patch to an older line leaves
+the sites where they are; a pre-release is never latest. Check that the latest release is the one you meant:
 
-In umccr/docs-platform: [move sites to a toolkit release](https://github.com/umccr/docs-platform/blob/main/docs/site/runbook.md#move-sites-to-a-toolkit-release),
-which changes `DOCS_TOOLKIT_REF` and any site's own `toolkitRef`, then rebuilds the sites that should not wait for
-their next push.
+```sh
+curl -fsS -o /dev/null -w '%{redirect_url}\n' https://github.com/umccr/docs-toolkit/releases/latest
+```
+
+A release made by hand, such as one for a tag from before the release workflow, takes `--latest=false` unless it is
+the highest version: GitHub otherwise makes every new release latest.
+
+### 4. The sites
+
+Nothing merges in umccr/docs-platform. Its CI builds `/platform/` with the latest release on its next run, and each site
+that pins no release builds with it at its next push. To rebuild a site sooner, to pin one that must wait, or to roll a
+release back, follow umccr/docs-platform's runbook,
+[Toolkit releases](https://github.com/umccr/docs-platform/blob/main/docs/site/runbook.md#toolkit-releases).
 
 ## Versioning
 
@@ -141,8 +157,8 @@ their next push.
   patch (`v0.3.2`).
 - `v1.0.0` comes once the engine is decided, the first users' feedback is in, and a team outside the platform team
   depends on the contract with a site of its own. From then on, a breaking change needs a new major version.
-- docs-platform's registry takes a release tag or a full commit SHA as a site's `toolkitRef`, never a branch, whose
-  next merge would change how the site builds without a registry change.
+- docs-platform's registry takes `latest`, a release tag or a full commit SHA as a site's `toolkitRef`, never a
+  branch, which would build sites with code nobody released.
 
 ## Repository settings
 
@@ -151,8 +167,8 @@ An organisation owner sets these:
 - **Rulesets**, under **Settings → Rules → Rulesets**:
   - **`main`**: require a pull request with one approval, and the `ci` checks to pass ("Tests and lint", "Theme
     script tests", "Strict builds of the examples", "Workflows and secrets"); block force pushes and deletion.
-  - **`v*` tags**: only the platform owners may create them, and nobody may update or delete one: a moved tag would
-    change how sites build without a registry change.
+  - **`v*` tags**: only the platform owners may create them, and nobody may update or delete one. A new tag's release
+    reaches every site that pins none, and a moved tag would change a release that sites already build with.
 - **Release immutability**, under **Settings → General → Releases**, before the first release: each release then
   locks its tag. It covers only releases made after it is on.
 - **Secret scanning, push protection and Dependabot alerts**, and private vulnerability reporting.
