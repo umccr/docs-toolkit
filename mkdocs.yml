@@ -1,0 +1,26 @@
+# docs-toolkit's own pages, docs/, as a docs.umccr.org site: what the toolkit is, how it is laid out, what it is built
+# with, how to release it, and what each check means. The site pipeline in umccr/docs-platform builds and publishes it
+# once the site is registered there (infrastructure/sites.ts), with the toolkit's latest release; this repository needs
+# no workflow for it. Only docs/ is published. A link from it to a file elsewhere is a full GitHub URL.
+# Check it with `umccr-docs check` and `umccr-docs build` at the repository root (docs/runbook.md, "Update these pages").
+site_name: docs-toolkit
+site_description: 'umccr-docs, the toolkit that checks, builds, exports and publishes every docs.umccr.org site, and their theme.'
+site_url: https://docs.umccr.org/docs-toolkit/
+repo_url: https://github.com/umccr/docs-toolkit
+repo_name: umccr/docs-toolkit
+edit_uri: edit/main/docs/
+docs_dir: docs
+# A link to a heading that does not exist fails the strict build, as a link to a missing page does.
+validation:
+  anchors: warn
+extra:
+  platform:
+    # The product page, the place to start, becomes the site's front page, index.md.
+    home: product.md
+nav:
+  - Product: index.md
+  - Structure: structure.md
+  - Tech stack: tech.md
+  - Runbook: runbook.md
+  - Checks and errors: checks.md
+  - Questions: faq.md
